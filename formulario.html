@@ -59,6 +59,17 @@
 
     /* tela de "carregando" simples */
     #loading{display:flex;align-items:center;justify-content:center;height:40vh;color:#555;font-size:4.6vw}
+
+    /* modal genérico */
+    .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:999}
+    .modal-content{background:#fff;padding:6vw;border-radius:2vw;text-align:center}
+    .modal-content button{margin:2vw;padding:2.5vw 5vw;font-size:4.5vw;border:none;border-radius:2vw;color:#fff;cursor:pointer}
+    .modal-content .confirm{background:#e94373}
+    .modal-content .cancel{background:#bbb;color:#333}
+    @media (prefers-color-scheme: dark){
+      .modal-content{background:#1e1e1e;color:#eee}
+      .modal-content .cancel{background:#444;color:#eee}
+    }
   </style>
 </head>
 <body>
@@ -111,6 +122,10 @@
     let pages = [];         // apenas os locais
     let current = 0;        // índice dentro de seq
     let ready = false;
+    const responsavel = localStorage.getItem('responsavel');
+    if(!responsavel){
+      window.location.search = '';
+    }
 
     const $loading = document.getElementById('loading');
     const $wrap    = document.getElementById('appWrap');
@@ -222,15 +237,36 @@
         const respostas = Array.from(document.querySelectorAll("select.resposta")).map(s=> s.value==="" ? "0" : s.value);
         const observacoes = document.getElementById("observacoes").value.trim();
         try {
-          google.script.run.salvarRespostas({responsavel:"—", respostas, observacoes});
+          google.script.run.salvarRespostas({responsavel: responsavel || "—", respostas, observacoes});
         } catch(e) {
           console.warn("google.script.run não disponível no preview.", e);
         }
       }
     };
 
-    // Sair: sem função por enquanto
-    $exit.onclick = () => { /* intencionalmente vazio */ };
+    // Sair: mostra confirmação e limpa login
+    $exit.onclick = sair;
+
+    function sair(){
+      const modal = document.createElement('div');
+      modal.className = 'modal';
+      modal.innerHTML = `
+        <div class="modal-content">
+          <p style="font-size:4.5vw;margin-bottom:4vw;">Deseja sair?</p>
+          <button class="confirm" id="sairSim">Sim</button>
+          <button class="cancel" id="sairNao">Não</button>
+        </div>`;
+      document.body.appendChild(modal);
+      modal.style.display = 'flex';
+      document.getElementById('sairSim').onclick = () => {
+        localStorage.clear();
+        window.location.search = '';
+      };
+      document.getElementById('sairNao').onclick = () => {
+        modal.remove();
+      };
+      modal.onclick = (e)=>{ if(e.target===modal) modal.remove(); };
+    }
 
     function reiniciar(){
       document.querySelectorAll("select.resposta").forEach(s=> s.value="");

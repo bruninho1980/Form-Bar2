@@ -59,9 +59,37 @@ function doGet(e) {
   }
 
 
-  // Padrão: renderiza o formulário
-  return HtmlService.createHtmlOutputFromFile("formulario")
-    .setTitle("Contagem de Estoque - Bar 80");
+  // Padrão: renderiza login ou formulário
+  if (e && e.parameter && e.parameter.page === 'formulario') {
+    return HtmlService.createHtmlOutputFromFile('formulario')
+      .setTitle('Contagem de Estoque - Bar 80');
+  }
+  return HtmlService.createHtmlOutputFromFile('login')
+    .setTitle('Login - Bar 80');
+}
+
+/* =========================
+   LOGIN
+   ========================= */
+function verificarLogin(usuario, senha){
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getSheetByName("Parâmetros") || ss.getSheetByName("Parametros");
+  if(!sh) return {success:false};
+  const last = sh.getLastRow();
+  if(last < 3) return {success:false};
+  const data = sh.getRange(3, 27, last-2, 3).getValues(); // AA,AB,AC
+  const hash = Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, senha));
+  for(const row of data){
+    const user = (row[0] || "").toString().trim();
+    const pass = (row[1] || "").toString().trim();
+    const nome = (row[2] || "").toString().trim();
+    if(user && user === usuario){
+      if(pass === senha || pass === hash){
+        return {success:true, nome:nome || user};
+      }
+    }
+  }
+  return {success:false};
 }
 
 
