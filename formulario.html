@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body{font-family:'Montserrat',Arial,sans-serif;margin:0;background:#f8f9fa;color:#333;overflow-x:hidden}
+    header{background:linear-gradient(135deg,#3d4076,#1eb0e6);color:#fff;padding:3vw 2vw;text-align:center;display:flex;flex-direction:column;align-items:center}
+    header img{max-width:25vw;margin-bottom:1vw}
+    header .title{font-size:5vw;font-weight:700}
+
+    /* Carrossel visível */
+    #carrossel{display:flex;justify-content:center;gap:1vw;margin:2vw 0;flex-wrap:wrap}
+    .dot{width:3vw;height:3vw;border-radius:50%;background:#ccc;transition:all .3s}
+    .dot.active{background:linear-gradient(135deg,#f39847,#ef7f5e);transform:scale(1.3)}
+
+    #progresso{text-align:center;font-size:4vw;font-weight:600;margin:1vw 0;color:#555}
+    main{padding:3vw;margin-bottom:28vw}
+    .campo{margin-bottom:4vw}
+    label{display:block;margin-bottom:1vw;font-weight:600;font-size:4.5vw}
+    select,textarea{width:100%;max-width:100%;box-sizing:border-box;padding:2.5vw;font-size:4.5vw;border:0.5vw solid #f39847;border-radius:2vw;background:#fff;color:#000}
+    textarea{min-height:20vw;resize:vertical}
+
+    .grupo{margin:3vw 0;padding:3vw;background:#fff;border-radius:2vw;box-shadow:0 0.8vw 2vw rgba(0,0,0,.15)}
+    .grupo h3{margin:0 0 2vw 0;font-size:5vw;text-align:center;color:#3d4076;font-weight:700;border-bottom:0.5vw solid #eee;padding-bottom:1vw}
+    .pagina{display:none}
+    .ativa{display:block}
+
+    /* obrigatórios */
+    .req-legend{font-size:3.6vw;color:#e94373;text-align:center;margin:0 0 2vw}
+    label.req::after{content:" *";color:#e94373;font-weight:700}
+    select.resposta.error{border-color:#e94373!important;box-shadow:0 0 .6vw rgba(233,67,115,.35)}
+
+    /* footer / botões */
+    footer{position:fixed;bottom:0;left:0;width:100%;background:#fff;border-top:.5vw solid #ddd;box-shadow:0 -1vw 2vw rgba(0,0,0,.15);padding:2vw;box-sizing:border-box;display:none;flex-direction:column;align-items:center}
+    .footer-buttons{display:flex;justify-content:space-between;width:100%;gap:2vw;margin-bottom:1.2vw}
+    .footer-buttons button{flex:1;box-sizing:border-box}
+
+    button{padding:3vw;font-size:4.5vw;font-weight:700;border:none;border-radius:2vw;cursor:pointer;color:#fff}
+    #prevBtn{background:#bbb;color:#666;cursor:default} /* desativado na 1ª página */
+    #nextBtn{background:linear-gradient(135deg,#1eb0e6,#3d4076)}
+    #exitBtn{background:linear-gradient(135deg,#ff4b5c,#8b0000);width:40%}
+
+    .footer-version{font-size:3.5vw;color:#777;font-weight:500;margin-top:.8vw;text-align:center}
+
+    /* estado inicial: oculto até carregar páginas */
+    #appWrap{display:none}
+
+    @media (prefers-color-scheme: dark){
+      body{background:#121212;color:#eee}
+      header{background:linear-gradient(135deg,#0c2a38,#1eb0e6)}
+      .grupo{background:#1e1e1e}
+      select,textarea{background:#2a2a2a;color:#eee;border-color:#e94373}
+      footer{background:#1a1a1a;border-top:1px solid #333}
+      .dot{background:#555}
+      .dot.active{background:linear-gradient(135deg,#1eb0e6,#3d4076)}
+    }
+
+    /* tela de "carregando" simples */
+    #loading{display:flex;align-items:center;justify-content:center;height:40vh;color:#555;font-size:4.6vw}
+  </style>
+</head>
+<body>
+  <header>
+    <img src="https://i.imgur.com/QXV9q62.png" alt="Logo Bar 80">
+    <div class="title">Contagem de Estoque</div>
+  </header>
+
+  <!-- Loading simples até montar as páginas -->
+  <div id="loading">Carregando formulário…</div>
+
+  <div id="appWrap">
+    <div id="carrossel"></div>
+    <div id="progresso"></div>
+
+    <main>
+      <div id="pages"></div>
+
+      <div class="pagina" id="pObservacoes">
+        <div class="grupo">
+          <h3>Observações</h3>
+          <div class="campo">
+            <label>Digite suas observações:</label>
+            <textarea id="observacoes" placeholder="Escreva aqui..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="pagina" id="pFim" style="text-align:center;">
+        <img src="https://i.imgur.com/QXV9q62.png" style="max-width:45vw; margin-top:4vw;">
+        <h1 style="font-size:6vw; margin:4vw 0;">FIM</h1>
+        <p style="font-size:4.5vw; margin-bottom:4vw;">Deseja responder novamente?</p>
+        <button onclick="reiniciar()" style="background:linear-gradient(135deg,#1eb0e6,#3d4076); padding:3vw; font-size:4.5vw; border-radius:2vw;">🔄 Recomeçar</button>
+      </div>
+    </main>
+
+    <footer id="footerNav">
+      <div class="footer-buttons">
+        <button id="prevBtn" type="button">⬅ Voltar</button>
+        <button id="nextBtn" type="button">Próximo ➡</button>
+      </div>
+      <button id="exitBtn" type="button">🚪 Sair</button>
+      <div class="footer-version">Versão 4.8</div>
+    </footer>
+  </div>
+
+  <script>
+    // Sequência de páginas exibidas (preenchida após carregar locais)
+    let seq = [];           // [page0, page1, ..., pageN-1, pObservacoes, pFim]
+    let pages = [];         // apenas os locais
+    let current = 0;        // índice dentro de seq
+    let ready = false;
+
+    const $loading = document.getElementById('loading');
+    const $wrap    = document.getElementById('appWrap');
+    const $footer  = document.getElementById('footerNav');
+    const $prev    = document.getElementById('prevBtn');
+    const $next    = document.getElementById('nextBtn');
+    const $exit    = document.getElementById('exitBtn');
+
+    function buildDots(){
+      const carrossel=document.getElementById("carrossel");
+      carrossel.innerHTML="";
+      pages.forEach(()=>{ const d=document.createElement("div"); d.className="dot"; carrossel.appendChild(d); });
+      updateDots();
+    }
+    function updateDots(){
+      const dots=document.querySelectorAll(".dot");
+      const pageIndex = current < pages.length ? current : -1; // só acende nos locais
+      dots.forEach((d,i)=> d.classList.toggle("active", i===pageIndex));
+    }
+
+    function showByIndex(idx){
+      idx = Math.max(0, Math.min(idx, seq.length-1));
+      seq.forEach(p=>p.classList.remove('ativa'));
+      seq[idx].classList.add('ativa');
+      current = idx;
+      window.scrollTo({top:0, behavior:'smooth'});
+      updateFooter();
+      setProgress();
+      updateDots();
+    }
+
+    function setProgress(){
+      const total = pages.length;
+      const el = document.getElementById('progresso');
+      if (current < total) el.textContent = `Local ${current+1} de ${total}`;
+      else if (seq[current].id === 'pObservacoes') el.textContent = 'Observações';
+      else el.textContent = 'Finalização';
+    }
+
+    function disablePrev(disabled){
+      if (disabled){
+        $prev.disabled = true;
+        $prev.style.background = '#bbb';
+        $prev.style.color = '#666';
+        $prev.style.cursor = 'default';
+      } else {
+        $prev.disabled = false;
+        $prev.style.background = 'linear-gradient(135deg,#ef7f5e,#f39847)';
+        $prev.style.color = '#fff';
+        $prev.style.cursor = 'pointer';
+      }
+    }
+
+    function updateFooter(){
+      if (!ready){ $footer.style.display = 'none'; return; }
+      $footer.style.display = (seq[current].id === 'pFim') ? 'none' : 'flex';
+      const total = pages.length;
+
+      // Prev
+      disablePrev(current === 0);
+
+      // Next label
+      if (current === total) $next.textContent = 'Finalizar';
+      else $next.textContent = 'Próximo ➡';
+
+      // Exit visível desde a 1ª página (sem função por enquanto)
+      $exit.style.display = 'block';
+    }
+
+    // Navegação
+    $prev.onclick = () => {
+      if (!ready) return;
+      if (current === 0) return;
+      showByIndex(current - 1);
+    };
+
+    $next.onclick = () => {
+      if (!ready) return;
+      const total = pages.length;
+
+      // valida obrigatórios somente nas páginas de locais
+      if (current < total){
+        const pagina = pages[current];
+        const obrigatorios = pagina.querySelectorAll("select[data-required='true']");
+        let faltando = false;
+        obrigatorios.forEach(s=>{
+          if (s.value === ""){
+            s.classList.add("error");
+            faltando = true;
+          } else {
+            s.classList.remove("error");
+          }
+        });
+        if (faltando){
+          alert("Preencha todos os campos obrigatórios (*) antes de continuar.");
+          return;
+        }
+      }
+
+      // avançar
+      if (current < seq.length - 1){
+        showByIndex(current + 1);
+      } else {
+        // estamos em pFim (não deve acontecer pois footer some), só por segurança
+      }
+
+      // se acabamos de sair de Observações para Fim, envia
+      if (current === total + 1){ // antes do showByIndex acima current ainda não mudou
+        const respostas = Array.from(document.querySelectorAll("select.resposta")).map(s=> s.value==="" ? "0" : s.value);
+        const observacoes = document.getElementById("observacoes").value.trim();
+        try {
+          google.script.run.salvarRespostas({responsavel:"—", respostas, observacoes});
+        } catch(e) {
+          console.warn("google.script.run não disponível no preview.", e);
+        }
+      }
+    };
+
+    // Sair: sem função por enquanto
+    $exit.onclick = () => { /* intencionalmente vazio */ };
+
+    function reiniciar(){
+      document.querySelectorAll("select.resposta").forEach(s=> s.value="");
+      document.getElementById("observacoes").value="";
+      showByIndex(0);
+    }
+
+    // Carrega estrutura e monta páginas
+    try{
+      google.script.run.withSuccessHandler(estrutura=>{
+        const wrap = document.getElementById('pages');
+        wrap.innerHTML = "";
+        pages = [];
+
+        estrutura.forEach(grupo=>{
+          const page = document.createElement('div');
+          page.className = 'pagina';
+          const card = document.createElement('div');
+          card.className = 'grupo';
+
+          const h = document.createElement('h3');
+          h.textContent = grupo.local;
+          card.appendChild(h);
+
+          const legend = document.createElement('div');
+          legend.className = 'req-legend';
+          legend.textContent = '* Campos obrigatórios';
+          card.appendChild(legend);
+
+          grupo.produtos.forEach(p=>{
+            const row = document.createElement('div');
+            row.className = 'campo';
+            row.innerHTML = `
+              <label class="${p.required ? 'req' : ''}">${p.nome}</label>
+              <select class="resposta" ${p.required ? "data-required='true'" : ""}>
+                <option value="">Selecionar</option>
+                ${Array.from({length:351},(_,i)=>`<option value="${i}">${i}</option>`).join('')}
+              </select>`;
+            card.appendChild(row);
+          });
+
+          page.appendChild(card);
+          wrap.appendChild(page);
+          pages.push(page);
+        });
+
+        // sequência completa
+        const pObs = document.getElementById('pObservacoes');
+        const pFim = document.getElementById('pFim');
+        seq = [...pages, pObs, pFim];
+
+        // mostrar app e primeira página
+        buildDots();
+        ready = true;
+        $loading.style.display = 'none';
+        $wrap.style.display = 'block';
+        showByIndex(0); // começa no primeiro local
+      }).getEstrutura();
+    } catch(e){
+      document.getElementById('loading').textContent = 'Erro ao carregar o formulário.';
+      console.error(e);
+    }
+  </script>
+</body>
+</html>
